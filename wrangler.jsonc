@@ -1,0 +1,21 @@
+{
+	"compatibility_date": "2025-10-08",
+	"main": "src/index.ts",
+	"name": "hype-data-worker",
+	"upload_source_maps": true,
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "hype-data-db",
+			"database_id": "58f587c0-9658-402f-8378-5f9c8b3dc77a"
+		}
+	],
+	"triggers": {
+		"crons": [
+			"0 */8 * * *"
+		]
+	}
+}
