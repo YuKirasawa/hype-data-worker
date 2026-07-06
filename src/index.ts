@@ -46,16 +46,18 @@ async function getPrice() {
 
 async function saveBalance(env: Env) {
   const balance = await getBalance();
+  
+  const price = await getPrice();
 
   const ts = Math.floor(Date.now() / 1000);
 
   await env.DB.prepare(
     `
-INSERT INTO af_balance_history(ts,balance)
-VALUES(?,?)
+INSERT INTO af_balance_history(ts,balance,price)
+VALUES(?,?,?)
 `
   )
-    .bind(ts, balance)
+    .bind(ts, balance, price)
     .run();
 }
 
