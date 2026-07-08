@@ -5,7 +5,13 @@ export interface Env {
 const AF_ADDRESS =
   "0xfefefefefefefefefefefefefefefefefefefefe";
 
+const USDC_ADDRESS = "0xb88339CB7199b77E23DB6E890353E22632Ba630f";
+
+const USDC_DECIMALS = 6;
+
 const INFO_API = "https://api.hyperliquid.xyz/info";
+
+const EVM_RPC = "https://rpc.hyperliquid.xyz/evm";
 
 async function getBalance() {
   const res = await fetch(INFO_API, {
@@ -44,20 +50,49 @@ async function getPrice() {
   return Number(mids.HYPE);
 }
 
-async function saveBalance(env: Env) {
+async function getUSDCSupply() {
+  const res = await fetch(EVM_RPC, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "eth_call",
+      "params": [
+        {
+          "to": USDC_ADDRESS,
+          "data": "0x18160ddd" // totalSupply
+        },
+        "latest"
+      ]
+    }),
+  });
+
+  const json: any = await res.json();
+
+  const supply = BigInt(json.result);
+
+  return Number(supply) / 10 ** USDC_DECIMALS;
+}
+
+async function saveData(env: Env) {
   const balance = await getBalance();
   
   const price = await getPrice();
 
   const ts = Math.floor(Date.now() / 1000);
+  
+  const USDCSupply = await getUSDCSupply();
 
   await env.DB.prepare(
     `
-INSERT INTO af_balance_history(ts,balance,price)
-VALUES(?,?,?)
+INSERT INTO af_balance_history(ts,balance,price,USDC_supply)
+VALUES(?,?,?,?)
 `
   )
-    .bind(ts, balance, price)
+    .bind(ts, balance, price, USDCSupply)
     .run();
 }
 
@@ -83,6 +118,7 @@ ORDER BY ts ASC
     return {
       buyback: 0,
       current: 0,
+      usdc: 0,
     };
   }
 
@@ -92,13 +128,14 @@ ORDER BY ts ASC
   return {
     buyback: Math.max(0, last - first),
     current: last,
+    usdc: result[result.length - 1].USDC_supply,
   };
 }
 
 export default {
 
   async scheduled(event: ScheduledEvent, env: Env) {
-    await saveBalance(env);
+    await saveData(env);
   },
 
   async fetch(req: Request, env: Env) {
@@ -111,7 +148,8 @@ export default {
       currentBalance: stat.current,
       buybackHype: stat.buyback,
       buybackUsd: stat.buyback * price,
-      price,
+      hypePrice: price,
+      USDCSupply: stat.usdc
     });
 
   },
