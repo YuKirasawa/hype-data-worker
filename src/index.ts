@@ -144,12 +144,14 @@ export default {
 
     const stat = await calc24h(env);
 
+    const formatter = new Intl.NumberFormat('en-US');
+
     return Response.json({
-      currentBalance: stat.current,
-      buybackHype: stat.buyback,
-      buybackUsd: stat.buyback * price,
+      currentBalance: formatter.format(stat.current),
+      buybackHype: formatter.format(stat.buyback),
+      buybackUsd: formatter.format(stat.buyback * price),
       hypePrice: price,
-      USDCSupply: stat.usdc
+      USDCSupply: formatter.format(stat.usdc)
     });
 
   },
