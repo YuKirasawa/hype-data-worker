@@ -151,7 +151,8 @@ export default {
       buybackHype: formatter.format(stat.buyback),
       buybackUsd: formatter.format(stat.buyback * price),
       hypePrice: price,
-      USDCSupply: formatter.format(stat.usdc)
+      USDCSupply: formatter.format(stat.usdc),
+      USDCDailyInterest: formatter.format(stat.usdc * 3.5 / 100 / 365)
     });
 
   },
