@@ -94,23 +94,24 @@ h1 {
   </div>
 </div>
 <script>
+const fmt = new Intl.NumberFormat('en-US');
+
 async function load() {
   try {
     const res = await fetch('/api');
     const data = await res.json();
-    document.getElementById('balance').textContent = data.currentBalance + ' HYPE';
+    document.getElementById('balance').textContent = fmt.format(data.currentBalance) + ' HYPE';
     document.getElementById('price').textContent = '$' + data.hypePrice.toFixed(4);
-    document.getElementById('buybackHype').textContent = data.buybackHype + ' HYPE';
-    document.getElementById('buybackUsd').textContent = '$' + data.buybackUsd;
-    document.getElementById('usdcSupply').textContent = '$' + data.USDCSupply;
-    document.getElementById('usdcInterest').textContent = '$' + data.USDCDailyInterest;
+    document.getElementById('buybackHype').textContent = fmt.format(data.buybackHype) + ' HYPE';
+    document.getElementById('buybackUsd').textContent = '$' + fmt.format(data.buybackUsd);
+    document.getElementById('usdcSupply').textContent = '$' + fmt.format(data.USDCSupply);
+    document.getElementById('usdcInterest').textContent = '$' + fmt.format(data.USDCDailyInterest);
     document.getElementById('updated').textContent = 'Updated: ' + new Date().toLocaleString();
   } catch (e) {
     document.getElementById('updated').textContent = 'Failed to load data';
   }
 }
 load();
-setInterval(load, 60000);
 </script>
 </body>
 </html>

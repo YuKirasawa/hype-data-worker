@@ -146,15 +146,14 @@ export default {
     if (url.pathname === "/api") {
       const price = await getPrice();
       const stat = await calc24h(env);
-      const formatter = new Intl.NumberFormat('en-US');
 
       return Response.json({
-        currentBalance: formatter.format(stat.current),
-        buybackHype: formatter.format(stat.buyback),
-        buybackUsd: formatter.format(stat.buyback * price),
+        currentBalance: stat.current,
+        buybackHype: stat.buyback,
+        buybackUsd: stat.buyback * price,
         hypePrice: price,
-        USDCSupply: formatter.format(stat.usdc),
-        USDCDailyInterest: formatter.format(stat.usdc * 3.5 / 100 / 365)
+        USDCSupply: stat.usdc,
+        USDCDailyInterest: stat.usdc * 3.5 / 100 / 365
       });
     }
 
