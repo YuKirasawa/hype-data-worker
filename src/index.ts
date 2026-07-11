@@ -98,38 +98,29 @@ VALUES(?,?,?,?)
 }
 
 async function calc24h(env: Env) {
-  const now = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare(`
+    WITH latest AS (
+      SELECT ts, balance, USDC_supply FROM af_balance_history ORDER BY ts DESC LIMIT 1
+    )
+    SELECT
+      latest.balance AS current,
+      latest.USDC_supply AS usdc,
+      COALESCE(
+        (SELECT balance FROM af_balance_history WHERE ts <= latest.ts - 86400 ORDER BY ts DESC LIMIT 1),
+        0
+      ) AS earlier_balance
+    FROM latest
+  `).first();
 
-  const since = now - 86400;
-
-  const rows = await env.DB.prepare(
-    `
-SELECT *
-FROM af_balance_history
-WHERE ts>=?
-ORDER BY ts ASC
-`
-  )
-    .bind(since)
-    .all();
-
-  const result = rows.results as any[];
-
-  if (result.length == 0) {
-    return {
-      buyback: 0,
-      current: 0,
-      usdc: 0,
-    };
+  if (!row) {
+    return { buyback: 0, current: 0, usdc: 0 };
   }
 
-  const first = Number(result[0].balance);
-  const last = Number(result[result.length - 1].balance);
-
+  const r = row as any;
   return {
-    buyback: Math.max(0, last - first),
-    current: last,
-    usdc: result[result.length - 1].USDC_supply,
+    buyback: Math.max(0, Number(r.current) - Number(r.earlier_balance)),
+    current: Number(r.current),
+    usdc: r.usdc,
   };
 }
 
