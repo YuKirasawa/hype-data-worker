@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AF Buyback Dashboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f0f0f;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+.dashboard {
+  max-width: 800px;
+  width: 100%;
+}
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+.subtitle {
+  color: #888;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+.card.full { grid-column: 1 / -1; }
+.card-label {
+  font-size: 0.8rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+.card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+.card-value.usd { color: #4ade80; }
+.card-value.hype { color: #ce9eff; }
+.card-value.supply { color: #60a5fa; }
+.card-value.interest { color: #fbbf24; }
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <h1>AF Buyback Dashboard</h1>
+  <p class="subtitle" id="updated">Loading...</p>
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Current Balance</div>
+      <div class="card-value hype" id="balance">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">HYPE Price</div>
+      <div class="card-value usd" id="price">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">24h Buyback (HYPE)</div>
+      <div class="card-value hype" id="buybackHype">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">24h Buyback (USD)</div>
+      <div class="card-value usd" id="buybackUsd">—</div>
+    </div>
+    <div class="card full">
+      <div class="card-label">USDC Supply</div>
+      <div class="card-value supply" id="usdcSupply">—</div>
+    </div>
+    <div class="card full">
+      <div class="card-label">Daily USDC Interest (3.5% APY)</div>
+      <div class="card-value interest" id="usdcInterest">—</div>
+    </div>
+  </div>
+</div>
+<script>
+async function load() {
+  try {
+    const res = await fetch('/api');
+    const data = await res.json();
+    document.getElementById('balance').textContent = data.currentBalance + ' HYPE';
+    document.getElementById('price').textContent = '$' + data.hypePrice.toFixed(4);
+    document.getElementById('buybackHype').textContent = data.buybackHype + ' HYPE';
+    document.getElementById('buybackUsd').textContent = '$' + data.buybackUsd;
+    document.getElementById('usdcSupply').textContent = '$' + data.USDCSupply;
+    document.getElementById('usdcInterest').textContent = '$' + data.USDCDailyInterest;
+    document.getElementById('updated').textContent = 'Updated: ' + new Date().toLocaleString();
+  } catch (e) {
+    document.getElementById('updated').textContent = 'Failed to load data';
+  }
+}
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

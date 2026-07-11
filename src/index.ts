@@ -1,5 +1,6 @@
 export interface Env {
   DB: D1Database;
+  ASSETS: Fetcher;
 }
 
 const AF_ADDRESS =
@@ -140,20 +141,27 @@ export default {
 
   async fetch(req: Request, env: Env) {
 
-    const price = await getPrice();
+    const url = new URL(req.url);
 
-    const stat = await calc24h(env);
+    if (url.pathname === "/api") {
+      const price = await getPrice();
+      const stat = await calc24h(env);
+      const formatter = new Intl.NumberFormat('en-US');
 
-    const formatter = new Intl.NumberFormat('en-US');
+      return Response.json({
+        currentBalance: formatter.format(stat.current),
+        buybackHype: formatter.format(stat.buyback),
+        buybackUsd: formatter.format(stat.buyback * price),
+        hypePrice: price,
+        USDCSupply: formatter.format(stat.usdc),
+        USDCDailyInterest: formatter.format(stat.usdc * 3.5 / 100 / 365)
+      });
+    }
 
-    return Response.json({
-      currentBalance: formatter.format(stat.current),
-      buybackHype: formatter.format(stat.buyback),
-      buybackUsd: formatter.format(stat.buyback * price),
-      hypePrice: price,
-      USDCSupply: formatter.format(stat.usdc),
-      USDCDailyInterest: formatter.format(stat.usdc * 3.5 / 100 / 365)
-    });
-
+    const assetUrl = new URL(req.url);
+    if (assetUrl.pathname === "/") {
+      assetUrl.pathname = "/index.html";
+    }
+    return env.ASSETS.fetch(new Request(assetUrl, req));
   },
 };
