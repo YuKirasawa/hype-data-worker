@@ -32,7 +32,14 @@ async function getBalance() {
     (x: any) => x.coin === "HYPE"
   );
 
-  return Number(hype?.total ?? 0);
+  const usdc = json.balances.find(
+    (x: any) => x.coin === "USDC"
+  );
+
+  return {
+    hype: Number(hype?.total ?? 0),
+    usdc: Number(usdc?.total ?? 0),
+  };
 }
 
 async function getPrice() {
@@ -79,7 +86,7 @@ async function getUSDCSupply() {
 }
 
 async function saveData(env: Env) {
-  const balance = await getBalance();
+  const { hype, usdc } = await getBalance();
   
   const price = await getPrice();
 
@@ -89,38 +96,49 @@ async function saveData(env: Env) {
 
   await env.DB.prepare(
     `
-INSERT INTO af_balance_history(ts,balance,price,USDC_supply)
-VALUES(?,?,?,?)
+INSERT INTO af_balance_history(ts,balance,price,USDC_supply,USDC_balance)
+VALUES(?,?,?,?,?)
 `
   )
-    .bind(ts, balance, price, USDCSupply)
+    .bind(ts, hype, price, USDCSupply, usdc)
     .run();
 }
 
 async function calc24h(env: Env) {
-  const row = await env.DB.prepare(`
-    WITH latest AS (
-      SELECT ts, balance, USDC_supply FROM af_balance_history ORDER BY ts DESC LIMIT 1
-    )
-    SELECT
-      latest.balance AS current,
-      latest.USDC_supply AS usdc,
-      COALESCE(
-        (SELECT balance FROM af_balance_history WHERE ts <= latest.ts - 86400 ORDER BY ts DESC LIMIT 1),
-        0
-      ) AS earlier_balance
-    FROM latest
-  `).first();
+  const now = Math.floor(Date.now() / 1000);
 
-  if (!row) {
-    return { buyback: 0, current: 0, usdc: 0 };
+  const since = now - 86400;
+
+  const rows = await env.DB.prepare(
+    `
+SELECT *
+FROM af_balance_history
+WHERE ts>=?
+ORDER BY ts ASC
+`
+  )
+    .bind(since)
+    .all();
+
+  const result = rows.results as any[];
+
+  if (result.length == 0) {
+    return {
+      buyback: 0,
+      current: 0,
+      usdc: 0,
+      usdc_balance_diff: 0,
+    };
   }
 
-  const r = row as any;
+  const first = Number(result[0].balance);
+  const last = Number(result[result.length - 1].balance);
+
   return {
-    buyback: Math.max(0, Number(r.current) - Number(r.earlier_balance)),
-    current: Number(r.current),
-    usdc: r.usdc,
+    buyback: Math.max(0, last - first),
+    current: last,
+    usdc: result[result.length - 1].USDC_supply,
+    usdc_balance_diff: Number(result[result.length - 1].USDC_balance) - Number(result[0].USDC_balance)
   };
 }
 
@@ -144,7 +162,9 @@ export default {
         buybackUsd: stat.buyback * price,
         hypePrice: price,
         USDCSupply: stat.usdc,
-        USDCDailyInterest: stat.usdc * 3.5 / 100 / 365
+        USDCDailyInterest: stat.usdc * 3.5 / 100 / 365,
+        USDCBalanceDiff: stat.usdc_balance_diff,
+        Revenue: stat.buyback * price + stat.usdc_balance_diff,
       });
     }
 
