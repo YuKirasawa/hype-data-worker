@@ -164,7 +164,7 @@ export default {
         USDCSupply: stat.usdc,
         USDCDailyInterest: stat.usdc * 3.5 / 100 / 365,
         USDCBalanceDiff: stat.usdc_balance_diff,
-        Revenue: stat.buyback * price + stat.usdc_balance_diff,
+        revenue: stat.buyback * price + stat.usdc_balance_diff,
       });
     }
 

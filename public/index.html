@@ -67,6 +67,10 @@ h1 {
   <h1>AF Buyback Dashboard</h1>
   <p class="subtitle" id="updated">Loading...</p>
   <div class="grid">
+    <div class="card full">
+      <div class="card-label">Daily Revenue (USD)</div>
+      <div class="card-value revenue" id="revenue">—</div>
+    </div>
     <div class="card">
       <div class="card-label">Current Balance</div>
       <div class="card-value hype" id="balance">—</div>
@@ -100,6 +104,7 @@ async function load() {
   try {
     const res = await fetch('/api');
     const data = await res.json();
+    document.getElementById('revenue').textContent = '$' + fmt.format(data.revenue);
     document.getElementById('balance').textContent = fmt.format(data.currentBalance) + ' HYPE';
     document.getElementById('price').textContent = '$' + data.hypePrice.toFixed(4);
     document.getElementById('buybackHype').textContent = fmt.format(data.buybackHype) + ' HYPE';
