@@ -152,6 +152,11 @@ export default {
 
     const url = new URL(req.url);
 
+    if (url.pathname === "/api/update") {
+      await saveData(env);
+      return Response.json({ success: true });
+    }
+
     if (url.pathname === "/api") {
       const price = await getPrice();
       const stat = await calc24h(env);
