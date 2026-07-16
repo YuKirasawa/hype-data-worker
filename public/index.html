@@ -54,11 +54,13 @@ h1 {
   gap: 1rem;
 }
 .card {
-  background: #1a1a1a;
+  background: linear-gradient(135deg, #1a1a1a 0%, #1e1e1e 100%);
   border: 1px solid #2a2a2a;
   border-radius: 12px;
   padding: 1.5rem;
+  transition: border-color 0.2s, transform 0.2s;
 }
+.card:hover { border-color: #3a3a3a; transform: translateY(-1px); }
 .card.full { grid-column: 1 / -1; }
 .card-label {
   font-size: 0.8rem;
@@ -76,6 +78,8 @@ h1 {
 .card-value.hype { color: #ce9eff; }
 .card-value.supply { color: #60a5fa; }
 .card-value.interest { color: #fbbf24; }
+.card-value.revenue { color: #34d399; }
+.card-value.pe { color: #fb923c; }
 </style>
 </head>
 <body>
@@ -85,9 +89,13 @@ h1 {
   <button class="update-btn" id="reloadBtn" onclick="load()" style="right: 7.5rem;">↻ Reload</button>
   <p class="subtitle" id="updated">Loading...</p>
   <div class="grid">
-    <div class="card full">
+    <div class="card">
       <div class="card-label">Daily Revenue (USD)</div>
       <div class="card-value revenue" id="revenue">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Daily Annualized PE (Total as 6B HYPE)</div>
+      <div class="card-value pe" id="pe">—</div>
     </div>
     <div class="card">
       <div class="card-label">Current Balance</div>
@@ -123,6 +131,7 @@ async function load() {
     const res = await fetch('/api');
     const data = await res.json();
     document.getElementById('revenue').textContent = '$' + fmt.format(data.revenue);
+    document.getElementById('pe').textContent = fmt.format(data.pe);
     document.getElementById('balance').textContent = fmt.format(data.currentBalance) + ' HYPE';
     document.getElementById('price').textContent = '$' + data.hypePrice.toFixed(4);
     document.getElementById('buybackHype').textContent = fmt.format(data.buybackHype) + ' HYPE';
