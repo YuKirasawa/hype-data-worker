@@ -142,7 +142,7 @@ ORDER BY ts ASC
   };
 }
 
-async pushTelegram() {
+async function pushTelegram() {
   await env.telegram.send({
     botToken: "qwq",
     chatId: "qwq",
