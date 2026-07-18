@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
+  telegram: Queue;
 }
 
 const AF_ADDRESS =
@@ -142,12 +143,9 @@ ORDER BY ts ASC
   };
 }
 
-async function pushTelegram() {
+async function pushTelegram(env: Env, text: string) {
   await env.telegram.send({
-    botToken: "qwq",
-    chatId: "qwq",
-    threadId: "qwq",
-    text: "qwq"
+    text: text
   });
 }
 
@@ -155,6 +153,25 @@ export default {
 
   async scheduled(event: ScheduledEvent, env: Env) {
     await saveData(env);
+
+    const hour = new Date().getHours();
+    if (hour % 8 === 7) {
+      const price = await getPrice();
+      const stat = await calc24h(env);
+
+      const text = [
+        `📊 AF Buyback Report`,
+        `Balance: ${stat.current.toLocaleString('en-US')} HYPE`,
+        `Buyback (24h): ${stat.buyback.toLocaleString('en-US')} HYPE (\$${(stat.buyback * price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
+        `HYPE Price: \$${price.toFixed(4)}`,
+        `USDC Supply: ${stat.usdc.toLocaleString('en-US')}`,
+        `USDC Δ Balance: ${stat.usdc_balance_diff >= 0 ? '+' : ''}${stat.usdc_balance_diff.toLocaleString('en-US')}`,
+        `Revenue: \$${(stat.buyback * price + stat.usdc_balance_diff).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `PE: ${(600_000_000 / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
+      ].join('\n');
+
+      await pushTelegram(env, text);
+    }
   },
 
   async fetch(req: Request, env: Env) {
