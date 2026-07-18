@@ -142,14 +142,15 @@ ORDER BY ts ASC
   };
 }
 
-  async pushTelegram(req, env) {
-    await env.telegram.send({
-      botToken: "qwq",
-      chatId: "qwq",
-      threadId: "qwq",
-      text: "qwq"
-    });
-  },
+async pushTelegram() {
+  await env.telegram.send({
+    botToken: "qwq",
+    chatId: "qwq",
+    threadId: "qwq",
+    text: "qwq"
+  });
+}
+
 export default {
 
   async scheduled(event: ScheduledEvent, env: Env) {
