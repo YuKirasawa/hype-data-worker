@@ -16,6 +16,14 @@
 			"database_id": "58f587c0-9658-402f-8378-5f9c8b3dc77a"
 		}
 	],
+    "queues": {
+		"producers": [
+			{
+				"queue": "telegram-message-queue",
+				"binding": "telegram"
+			}
+		]
+    },
 	"triggers": {
 		"crons": [
 			"0 * * * *"
