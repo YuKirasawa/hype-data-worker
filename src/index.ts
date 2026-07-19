@@ -67,7 +67,7 @@ async function getPrice() {
   return Number(price);
 }
 
-async function getHYPESupplyDetail() {
+async function getHYPESupplyDetail0() {
   const res = await fetch(INFO_API, {
     method: "POST",
     headers: {
@@ -108,6 +108,28 @@ async function getHYPESupplyDetail() {
   }
 
   return data;
+}
+
+async function getHYPESupplyDetail() {
+  const res = await fetch(INFO_API, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      type: "tokenDetails",
+      tokenId: "0x0d01dc56dcaaca66ad901c959b4011ec", // HYPE
+    }),
+  });
+  const detail = await res.json();
+  const futureEmissions = detail.futureEmissions;
+  const nonCirculatingUserBalances = detail.nonCirculatingUserBalances;
+  const totalSupply = detail.totalSupply;
+  return {
+    futureEmissions: futureEmissions,
+    nonCirculatingUserBalances: nonCirculatingUserBalances,
+    totalSupply: totalSupply
+  }
 }
 
 async function getUSDCSupply() {
