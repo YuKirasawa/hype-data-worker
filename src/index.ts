@@ -240,7 +240,7 @@ async function runScheduled(env: Env, pushMessage: boolean) {
       `USDC Supply: ${stat.usdc.toLocaleString('en-US')}`,
       `USDC Δ Balance: ${stat.usdc_balance_diff >= 0 ? '+' : ''}${stat.usdc_balance_diff.toLocaleString('en-US')}`,
       `Revenue: \$${(stat.buyback * price + stat.usdc_balance_diff).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      `PE: ${(getSupply() / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
+      `PE: ${(getSupply(env) / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
     ].join('\n');
 
     await pushTelegram(env, text);
@@ -293,7 +293,7 @@ export default {
         USDCDailyInterest: stat.usdc * 3.5 / 100 / 365,
         USDCBalanceDiff: stat.usdc_balance_diff,
         revenue: stat.buyback * price + stat.usdc_balance_diff,
-        pe: getSupply() / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price,
+        pe: getSupply(env) / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price,
       });
     }
 
