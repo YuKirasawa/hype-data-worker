@@ -149,11 +149,10 @@ async function pushTelegram(env: Env, text: string) {
   });
 }
 
-async function runScheduled(env: Env) {
+async function runScheduled(env: Env, pushMessage: boolean) {
   await saveData(env);
 
-  const hour = new Date().getHours();
-  if (hour % 8 === 7) {
+  if (pushMessage) {
     const price = await getPrice();
     const stat = await calc24h(env);
 
@@ -175,7 +174,8 @@ async function runScheduled(env: Env) {
 export default {
 
   async scheduled(event: ScheduledEvent, env: Env) {
-    await runScheduled(env);
+    const hour = new Date().getHours();
+    await runScheduled(env, hour % 8 === 7);
   },
 
   async fetch(req: Request, env: Env) {
@@ -192,7 +192,7 @@ export default {
       if (hex !== "fd90c7629460f68cb54c7bd7d611c9a3ed21f7f5e1b6c250f85eb8139a3b14b5") {
         return Response.json({ error: "invalid passwd" }, { status: 403 });
       }
-      await runScheduled(env);
+      await runScheduled(env, true);
       return Response.json({ success: true });
     }
 
