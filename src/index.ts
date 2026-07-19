@@ -9,6 +9,9 @@ export interface Env {
 const AF_ADDRESS =
   "0xfefefefefefefefefefefefefefefefefefefefe";
 
+const HYPERLAB_ADDRESS =
+  "0x43e9abea1910387c4292bca4b94de81462f8a251";
+  
 const USDC_ADDRESS = "0xb88339CB7199b77E23DB6E890353E22632Ba630f";
 
 const USDC_DECIMALS = 6;
@@ -16,6 +19,8 @@ const USDC_DECIMALS = 6;
 const INFO_API = "https://api.hyperliquid.xyz/info";
 
 const EVM_RPC = "https://rpc.hyperliquid.xyz/evm";
+
+const HYPE_TOKEN_ID = "0x0d01dc56dcaaca66ad901c959b4011ec";
 
 async function getBalance() {
   const res = await fetch(INFO_API, {
@@ -67,49 +72,6 @@ async function getPrice() {
   return Number(price);
 }
 
-async function getHYPESupplyDetail0() {
-  const res = await fetch(INFO_API, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      type: "tokenDetails",
-      tokenId: "0x0d01dc56dcaaca66ad901c959b4011ec", // HYPE
-    }),
-  });
-  const parser = new JSONParser({
-    paths: [
-      "$.futureEmissions",
-      "$.nonCirculatingUserBalances",
-      "$.totalSupply"
-    ],
-    keepStack: false,
-  });
-
-  const reader = res.body!.pipeThrough(parser).getReader();
-  let data: any = {};
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const key = value.key;
-    const val = value.value;
-
-    if (key === "futureEmissions") {
-      data.futureEmissions = val;
-    }
-    if (key === "nonCirculatingUserBalances") {
-      data.nonCirculatingUserBalances = val;
-    }
-    if (key === "totalSupply") {
-      data.totalSupply = val;
-    }
-  }
-
-  return data;
-}
-
 async function getHYPESupplyDetail() {
   const res = await fetch(INFO_API, {
     method: "POST",
@@ -118,7 +80,7 @@ async function getHYPESupplyDetail() {
     },
     body: JSON.stringify({
       type: "tokenDetails",
-      tokenId: "0x0d01dc56dcaaca66ad901c959b4011ec", // HYPE
+      tokenId: HYPE_TOKEN_ID
     }),
   });
   const detail = await res.json();
@@ -159,6 +121,34 @@ async function getUSDCSupply() {
   return Number(supply) / 10 ** USDC_DECIMALS;
 }
 
+async function saveSupply(env: Env) {
+  const { futureEmissions, nonCirculatingUserBalances, totalSupply } =
+    await getHYPESupplyDetail();
+
+  const ts = Math.floor(Date.now() / 1000);
+  const future = Number(futureEmissions ?? 0);
+  const total = Number(totalSupply ?? 0);
+
+  const labEntry = nonCirculatingUserBalances?.find(
+    (x: any) => x[0] === HYPERLAB_ADDRESS
+  );
+  const afEntry = nonCirculatingUserBalances?.find(
+    (x: any) => x[0] === AF_ADDRESS
+  );
+
+  const lab = Number(labEntry?.[1] ?? 0);
+  const af = Number(afEntry?.[1] ?? 0);
+
+  await env.DB.prepare(
+    `
+INSERT INTO hype_supply(ts,future,lab,total,af)
+VALUES(?,?,?,?,?)
+`
+  )
+    .bind(ts, future, lab, total, af)
+    .run();
+}
+
 async function saveData(env: Env) {
   const { hype, usdc } = await getBalance();
   
@@ -176,6 +166,19 @@ VALUES(?,?,?,?,?)
   )
     .bind(ts, hype, price, USDCSupply, usdc)
     .run();
+}
+
+async function getSupply(env: Env) {
+  const row = await env.DB.prepare(
+    `
+SELECT *
+FROM hype_supply
+ORDER BY ts DESC
+LIMIT 1
+`
+  ).first();
+
+  return row.total - row.future - row.af;
 }
 
 async function calc24h(env: Env) {
@@ -237,7 +240,7 @@ async function runScheduled(env: Env, pushMessage: boolean) {
       `USDC Supply: ${stat.usdc.toLocaleString('en-US')}`,
       `USDC Δ Balance: ${stat.usdc_balance_diff >= 0 ? '+' : ''}${stat.usdc_balance_diff.toLocaleString('en-US')}`,
       `Revenue: \$${(stat.buyback * price + stat.usdc_balance_diff).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      `PE: ${(600_000_000 / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
+      `PE: ${(getSupply() / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
     ].join('\n');
 
     await pushTelegram(env, text);
@@ -249,6 +252,9 @@ export default {
   async scheduled(event: ScheduledEvent, env: Env) {
     const hour = new Date().getHours();
     await runScheduled(env, hour % 8 === 7);
+    if (hour === 0) {
+      await saveSupply(env);
+    }
   },
 
   async fetch(req: Request, env: Env) {
@@ -287,13 +293,13 @@ export default {
         USDCDailyInterest: stat.usdc * 3.5 / 100 / 365,
         USDCBalanceDiff: stat.usdc_balance_diff,
         revenue: stat.buyback * price + stat.usdc_balance_diff,
-        pe: 600_000_000 / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price,
+        pe: getSupply() / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price,
       });
     }
 
     if (url.pathname === "/api/test") {
-      const res = await getHYPESupplyDetail();
-      return Response.json(res);
+      await saveSupply(env);
+      return Response.json({ success: true });
     }
 
     const assetUrl = new URL(req.url);
