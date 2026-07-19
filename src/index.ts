@@ -243,6 +243,11 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/test") {
+      const res = await getHYPESupplyDetail();
+      return Response.json(res);
+    }
+
     const assetUrl = new URL(req.url);
     if (assetUrl.pathname === "/") {
       assetUrl.pathname = "/index.html";
