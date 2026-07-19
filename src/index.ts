@@ -56,7 +56,32 @@ async function getPrice() {
 
   const mids = await res.json();
 
-  return Number(mids?.HYPE ?? 0);
+  const price = mids?.HYPE ?? 0;
+
+  if (price === 0) {
+    console.error("get HYPE price error");
+  }
+
+  return Number(price);
+}
+
+async function getHYPESupplyDetail() {
+  const res = await fetch(INFO_API, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      type: "tokenDetails",
+      tokenId: "0x0d01dc56dcaaca66ad901c959b4011ec", // HYPE
+    }),
+  });
+
+  const detail = await res.json();
+
+  const futureEmissions = detail?.futureEmissions;
+
+  return Number(futureEmissions);
 }
 
 async function getUSDCSupply() {
