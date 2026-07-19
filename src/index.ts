@@ -83,7 +83,8 @@ async function getHYPESupplyDetail() {
       "$.futureEmissions",
       "$.nonCirculatingUserBalances",
       "$.totalSupply"
-    ]
+    ],
+    keepStack: false,
   });
 
   const reader = res.body!.pipeThrough(parser).getReader();
@@ -92,16 +93,16 @@ async function getHYPESupplyDetail() {
     const { done, value } = await reader.read();
     if (done) break;
 
-    const path = value.path.join(".");
+    const key = value.key;
     const val = value.value;
 
-    if (path.endsWith(".futureEmissions")) {
+    if (key === "futureEmissions") {
       data.futureEmissions = val;
     }
-    if (path.endsWith(".nonCirculatingUserBalances")) {
+    if (key === "nonCirculatingUserBalances") {
       data.nonCirculatingUserBalances = val;
     }
-    if (path.endsWith(".totalSupply")) {
+    if (key === ("totalSupply") {
       data.totalSupply = val;
     }
   }
