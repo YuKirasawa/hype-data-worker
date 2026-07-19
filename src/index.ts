@@ -231,6 +231,7 @@ async function runScheduled(env: Env, pushMessage: boolean) {
   if (pushMessage) {
     const price = await getPrice();
     const stat = await calc24h(env);
+    const supply = await getSupply(env);
 
     const text = [
       `📊 AF Buyback Report`,
@@ -240,7 +241,7 @@ async function runScheduled(env: Env, pushMessage: boolean) {
       `USDC Supply: ${stat.usdc.toLocaleString('en-US')}`,
       `USDC Δ Balance: ${stat.usdc_balance_diff >= 0 ? '+' : ''}${stat.usdc_balance_diff.toLocaleString('en-US')}`,
       `Revenue: \$${(stat.buyback * price + stat.usdc_balance_diff).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      `PE: ${(getSupply(env) / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
+      `PE: ${(supply / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
     ].join('\n');
 
     await pushTelegram(env, text);
@@ -283,6 +284,7 @@ export default {
     if (url.pathname === "/api") {
       const price = await getPrice();
       const stat = await calc24h(env);
+      const supply = await getSupply(env);
 
       return Response.json({
         currentBalance: stat.current,
@@ -293,7 +295,8 @@ export default {
         USDCDailyInterest: stat.usdc * 3.5 / 100 / 365,
         USDCBalanceDiff: stat.usdc_balance_diff,
         revenue: stat.buyback * price + stat.usdc_balance_diff,
-        pe: getSupply(env) / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price,
+        supply: supply,
+        pe: supply / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price,
       });
     }
 
