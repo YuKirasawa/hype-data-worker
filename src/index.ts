@@ -1,3 +1,5 @@
+import { JSONParser } from '@streamparser/json-whatwg';
+
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
@@ -76,12 +78,35 @@ async function getHYPESupplyDetail() {
       tokenId: "0x0d01dc56dcaaca66ad901c959b4011ec", // HYPE
     }),
   });
+  const parser = new JSONParser({
+    paths: [
+      "$.futureEmissions",
+      "$.nonCirculatingUserBalances",
+      "$.totalSupply"
+    ]
+  });
 
-  const detail = await res.json();
+  const reader = res.body!.pipeThrough(parser).getReader();
+  let data: any = {};
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
 
-  const futureEmissions = detail?.futureEmissions;
+    const path = value.path.join(".");
+    const val = value.value;
 
-  return Number(futureEmissions);
+    if (path.endsWith(".futureEmissions")) {
+      data.futureEmissions = val;
+    }
+    if (path.endsWith(".nonCirculatingUserBalances")) {
+      data.nonCirculatingUserBalances = val;
+    }
+    if (path.endsWith(".totalSupply")) {
+      data.totalSupply = val;
+    }
+  }
+
+  return data;
 }
 
 async function getUSDCSupply() {
