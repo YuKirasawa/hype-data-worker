@@ -102,7 +102,7 @@ async function getHYPESupplyDetail() {
     if (key === "nonCirculatingUserBalances") {
       data.nonCirculatingUserBalances = val;
     }
-    if (key === ("totalSupply") {
+    if (key === "totalSupply") {
       data.totalSupply = val;
     }
   }
