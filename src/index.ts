@@ -295,7 +295,7 @@ export default {
         USDCDailyInterest: stat.usdc * 3.5 / 100 / 365,
         USDCBalanceDiff: stat.usdc_balance_diff,
         revenue: stat.buyback * price + stat.usdc_balance_diff,
-        supply: supply,
+        hypeSupply: supply,
         pe: supply / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price,
       });
     }

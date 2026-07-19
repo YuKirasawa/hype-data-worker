@@ -95,8 +95,12 @@ h1 {
       <div class="card-value revenue" id="revenue">—</div>
     </div>
     <div class="card">
-      <div class="card-label">Daily Annualized PE (Total as 0.6B HYPE)</div>
+      <div class="card-label">Daily Annualized PE</div>
       <div class="card-value pe" id="pe">—</div>
+    </div>
+    <div class="card full">
+      <div class="card-label">HYPE Supply</div>
+      <div class="card-value supply" id="hypeSupply">—</div>
     </div>
     <div class="card">
       <div class="card-label">Current Balance</div>
@@ -114,14 +118,15 @@ h1 {
       <div class="card-label">24h Buyback (USD)</div>
       <div class="card-value usd" id="buybackUsd">—</div>
     </div>
-    <div class="card full">
+    <div class="card">
       <div class="card-label">USDC Supply</div>
       <div class="card-value supply" id="usdcSupply">—</div>
     </div>
-    <div class="card full">
+    <div class="card">
       <div class="card-label">Daily USDC Interest (3.5% APY)</div>
       <div class="card-value interest" id="usdcInterest">—</div>
     </div>
+    
   </div>
 </div>
 <script>
@@ -133,6 +138,7 @@ async function load() {
     const data = await res.json();
     document.getElementById('revenue').textContent = '$' + fmt.format(data.revenue);
     document.getElementById('pe').textContent = fmt.format(data.pe);
+    document.getElementById('hypeSupply').textContent = fmt.format(data.hypeSupply);
     document.getElementById('balance').textContent = fmt.format(data.currentBalance) + ' HYPE';
     document.getElementById('price').textContent = '$' + data.hypePrice.toFixed(4);
     document.getElementById('buybackHype').textContent = fmt.format(data.buybackHype) + ' HYPE';
