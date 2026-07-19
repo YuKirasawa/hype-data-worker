@@ -149,34 +149,52 @@ async function pushTelegram(env: Env, text: string) {
   });
 }
 
+async function runScheduled(env: Env) {
+  await saveData(env);
+
+  const hour = new Date().getHours();
+  if (hour % 8 === 7) {
+    const price = await getPrice();
+    const stat = await calc24h(env);
+
+    const text = [
+      `📊 AF Buyback Report`,
+      `Balance: ${stat.current.toLocaleString('en-US')} HYPE`,
+      `Buyback (24h): ${stat.buyback.toLocaleString('en-US')} HYPE (\$${(stat.buyback * price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
+      `HYPE Price: \$${price.toFixed(4)}`,
+      `USDC Supply: ${stat.usdc.toLocaleString('en-US')}`,
+      `USDC Δ Balance: ${stat.usdc_balance_diff >= 0 ? '+' : ''}${stat.usdc_balance_diff.toLocaleString('en-US')}`,
+      `Revenue: \$${(stat.buyback * price + stat.usdc_balance_diff).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      `PE: ${(600_000_000 / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
+    ].join('\n');
+
+    await pushTelegram(env, text);
+  }
+}
+
 export default {
 
   async scheduled(event: ScheduledEvent, env: Env) {
-    await saveData(env);
-
-    const hour = new Date().getHours();
-    if (hour % 8 === 7) {
-      const price = await getPrice();
-      const stat = await calc24h(env);
-
-      const text = [
-        `📊 AF Buyback Report`,
-        `Balance: ${stat.current.toLocaleString('en-US')} HYPE`,
-        `Buyback (24h): ${stat.buyback.toLocaleString('en-US')} HYPE (\$${(stat.buyback * price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
-        `HYPE Price: \$${price.toFixed(4)}`,
-        `USDC Supply: ${stat.usdc.toLocaleString('en-US')}`,
-        `USDC Δ Balance: ${stat.usdc_balance_diff >= 0 ? '+' : ''}${stat.usdc_balance_diff.toLocaleString('en-US')}`,
-        `Revenue: \$${(stat.buyback * price + stat.usdc_balance_diff).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        `PE: ${(600_000_000 / (stat.buyback * price + stat.usdc_balance_diff) / 365 * price).toFixed(2)}`,
-      ].join('\n');
-
-      await pushTelegram(env, text);
-    }
+    await runScheduled(env);
   },
 
   async fetch(req: Request, env: Env) {
 
     const url = new URL(req.url);
+
+    if (url.pathname === "/api/scheduled" && req.method === "POST") {
+      const { passwd } = await req.json() as { passwd?: string };
+      if (!passwd) {
+        return Response.json({ error: "missing passwd" }, { status: 400 });
+      }
+      const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(passwd));
+      const hex = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+      if (hex !== "fd90c7629460f68cb54c7bd7d611c9a3ed21f7f5e1b6c250f85eb8139a3b14b5") {
+        return Response.json({ error: "invalid passwd" }, { status: 403 });
+      }
+      await runScheduled(env);
+      return Response.json({ success: true });
+    }
 
     if (url.pathname === "/api/update") {
       await saveData(env);

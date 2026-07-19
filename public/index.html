@@ -87,6 +87,7 @@ h1 {
   <h1>AF Buyback Dashboard</h1>
   <button class="update-btn" id="updateBtn" onclick="triggerUpdate()">↻ Update</button>
   <button class="update-btn" id="reloadBtn" onclick="load()" style="right: 7.5rem;">↻ Reload</button>
+  <button class="update-btn" id="scheduledBtn" onclick="triggerScheduled()" style="right: 14rem;">⏰ Scheduled</button>
   <p class="subtitle" id="updated">Loading...</p>
   <div class="grid">
     <div class="card">
@@ -144,6 +145,31 @@ async function load() {
   }
 }
 load();
+
+async function triggerScheduled() {
+  const passwd = prompt('Enter password to trigger scheduled task:');
+  if (!passwd) return;
+  const btn = document.getElementById('scheduledBtn');
+  btn.disabled = true;
+  btn.textContent = '⏰ Running...';
+  try {
+    const res = await fetch('/api/scheduled', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passwd }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Request failed');
+    }
+    await load();
+  } catch (e) {
+    document.getElementById('updated').textContent = 'Scheduled failed: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⏰ Scheduled';
+  }
+}
 
 async function triggerUpdate() {
   const btn = document.getElementById('updateBtn');
