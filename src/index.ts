@@ -56,7 +56,7 @@ async function getPrice() {
 
   const mids = await res.json();
 
-  return Number(mids.HYPE);
+  return Number(mids?.HYPE ?? 0);
 }
 
 async function getUSDCSupply() {
