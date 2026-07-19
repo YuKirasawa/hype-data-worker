@@ -1,5 +1,3 @@
-import { JSONParser } from '@streamparser/json-whatwg';
-
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
@@ -301,7 +299,7 @@ export default {
     }
 
     if (url.pathname === "/api/test") {
-      await saveSupply(env);
+      // await saveSupply(env);
       return Response.json({ success: true });
     }
 
