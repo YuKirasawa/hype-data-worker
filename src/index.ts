@@ -22,32 +22,39 @@ const EVM_RPC = "https://rpc.hyperliquid.xyz/evm";
 
 const HYPE_TOKEN_ID = "0x0d01dc56dcaaca66ad901c959b4011ec";
 
-async function getBalance() {
-  const res = await fetch(INFO_API, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      type: "spotClearinghouseState",
-      user: AF_ADDRESS,
-    }),
-  });
+async function getBalance(retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(INFO_API, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "spotClearinghouseState",
+          user: AF_ADDRESS,
+        }),
+      });
 
-  const json: any = await res.json();
+      const json: any = await res.json();
 
-  const hype = json.balances.find(
-    (x: any) => x.coin === "HYPE"
-  );
+      const hype = json.balances.find(
+        (x: any) => x.coin === "HYPE"
+      );
 
-  const usdc = json.balances.find(
-    (x: any) => x.coin === "USDC"
-  );
+      const usdc = json.balances.find(
+        (x: any) => x.coin === "USDC"
+      );
 
-  return {
-    hype: Number(hype?.total ?? 0),
-    usdc: Number(usdc?.total ?? 0),
-  };
+      return {
+        hype: Number(hype?.total ?? 0),
+        usdc: Number(usdc?.total ?? 0),
+      };
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
 }
 
 async function getPrice() {
