@@ -1,292 +1,36 @@
-import { type Stats, buybackReport } from './message'
+import { computeStats, runScheduled, saveData, saveSupply } from './services';
+import { PUSH_HOURS, SCHEDULED_PASSWD_HASH, SUPPLY_SNAPSHOT_HOUR } from './config';
+import type { Env } from './types';
 
-export interface Env {
-  DB: D1Database;
-  ASSETS: Fetcher;
-  telegram: Queue;
-}
-
-const AF_ADDRESS =
-  "0xfefefefefefefefefefefefefefefefefefefefe";
-
-const HYPERLAB_ADDRESS =
-  "0x43e9abea1910387c4292bca4b94de81462f8a251";
-  
-const USDC_ADDRESS = "0xb88339CB7199b77E23DB6E890353E22632Ba630f";
-
-const USDC_DECIMALS = 6;
-
-const INFO_API = "https://api.hyperliquid.xyz/info";
-
-const EVM_RPC = "https://rpc.hyperliquid.xyz/evm";
-
-const HYPE_TOKEN_ID = "0x0d01dc56dcaaca66ad901c959b4011ec";
-
-async function getBalance(retries = 3) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const res = await fetch(INFO_API, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          type: "spotClearinghouseState",
-          user: AF_ADDRESS,
-        }),
-      });
-
-      const json: any = await res.json();
-
-      const hype = json.balances.find(
-        (x: any) => x.coin === "HYPE"
-      );
-
-      const usdc = json.balances.find(
-        (x: any) => x.coin === "USDC"
-      );
-
-      return {
-        hype: Number(hype?.total ?? 0),
-        usdc: Number(usdc?.total ?? 0),
-      };
-    } catch (e) {
-      if (i === retries - 1) throw e;
-      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
-    }
-  }
-}
-
-async function getPrice() {
-  const res = await fetch(INFO_API, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      type: "allMids",
-    }),
-  });
-
-  const mids = await res.json();
-
-  const price = mids?.HYPE ?? 0;
-
-  if (price === 0) {
-    console.error("get HYPE price error");
-  }
-
-  return Number(price);
-}
-
-async function getHYPESupplyDetail() {
-  const res = await fetch(INFO_API, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      type: "tokenDetails",
-      tokenId: HYPE_TOKEN_ID
-    }),
-  });
-  const detail = await res.json();
-  const futureEmissions = detail.futureEmissions;
-  const nonCirculatingUserBalances = detail.nonCirculatingUserBalances;
-  const totalSupply = detail.totalSupply;
-  return {
-    futureEmissions: futureEmissions,
-    nonCirculatingUserBalances: nonCirculatingUserBalances,
-    totalSupply: totalSupply
-  }
-}
-
-async function getUSDCSupply() {
-  const res = await fetch(EVM_RPC, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "eth_call",
-      "params": [
-        {
-          "to": USDC_ADDRESS,
-          "data": "0x18160ddd" // totalSupply
-        },
-        "latest"
-      ]
-    }),
-  });
-
-  const json: any = await res.json();
-
-  const supply = BigInt(json.result);
-
-  return Number(supply) / 10 ** USDC_DECIMALS;
-}
-
-async function saveSupply(env: Env) {
-  const { futureEmissions, nonCirculatingUserBalances, totalSupply } =
-    await getHYPESupplyDetail();
-
-  const ts = Math.floor(Date.now() / 1000);
-  const future = Number(futureEmissions ?? 0);
-  const total = Number(totalSupply ?? 0);
-
-  const labEntry = nonCirculatingUserBalances?.find(
-    (x: any) => x[0] === HYPERLAB_ADDRESS
-  );
-  const afEntry = nonCirculatingUserBalances?.find(
-    (x: any) => x[0] === AF_ADDRESS
+async function hashPasswd(passwd: string): Promise<string> {
+  const hash = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(passwd)
   );
 
-  const lab = Number(labEntry?.[1] ?? 0);
-  const af = Number(afEntry?.[1] ?? 0);
-
-  await env.DB.prepare(
-    `
-INSERT INTO hype_supply(ts,future,lab,total,af)
-VALUES(?,?,?,?,?)
-`
-  )
-    .bind(ts, future, lab, total, af)
-    .run();
-}
-
-async function saveData(env: Env) {
-  const { hype, usdc } = await getBalance();
-  
-  const price = await getPrice();
-
-  const ts = Math.floor(Date.now() / 1000);
-  
-  const USDCSupply = await getUSDCSupply();
-
-  await env.DB.prepare(
-    `
-INSERT INTO af_balance_history(ts,balance,price,USDC_supply,USDC_balance)
-VALUES(?,?,?,?,?)
-`
-  )
-    .bind(ts, hype, price, USDCSupply, usdc)
-    .run();
-}
-
-async function getSupply(env: Env) {
-  const row = await env.DB.prepare(
-    `
-SELECT *
-FROM hype_supply
-ORDER BY ts DESC
-LIMIT 1
-`
-  ).first();
-
-  return row.total - row.future - row.af;
-}
-
-async function calc24h(env: Env) {
-  const now = Math.floor(Date.now() / 1000);
-
-  const since = now - 86400;
-
-  const rows = await env.DB.prepare(
-    `
-SELECT *
-FROM af_balance_history
-WHERE ts>=?
-ORDER BY ts ASC
-`
-  )
-    .bind(since)
-    .all();
-
-  const result = rows.results as any[];
-
-  if (result.length == 0) {
-    return {
-      buyback: 0,
-      current: 0,
-      usdc: 0,
-      usdc_balance_diff: 0,
-    };
-  }
-
-  const first = Number(result[0].balance);
-  const last = Number(result[result.length - 1].balance);
-
-  return {
-    buyback: Math.max(0, last - first),
-    current: last,
-    usdc: result[result.length - 1].USDC_supply,
-    usdc_balance_diff: Number(result[result.length - 1].USDC_balance) - Number(result[0].USDC_balance)
-  };
-}
-
-async function computeStats(env: Env): Promise<Stats> {
-  const price = await getPrice();
-  const stat = await calc24h(env);
-  const hypeSupply = await getSupply(env);
-  const revenue = stat.buyback * price + stat.usdc_balance_diff;
-  const pe = hypeSupply / revenue / 365 * price;
-
-  return {
-    currentBalance: stat.current,
-    buybackHype: stat.buyback,
-    buybackUsd: stat.buyback * price,
-    hypePrice: price,
-    USDCSupply: stat.usdc,
-    USDCDailyInterest: stat.usdc * 3.5 / 100 / 365,
-    USDCBalanceDiff: stat.usdc_balance_diff,
-    revenue,
-    hypeSupply,
-    pe,
-  };
-}
-
-async function pushTelegram(env: Env, text: string) {
-  await env.telegram.send({
-    text: text
-  });
-}
-
-async function runScheduled(env: Env, pushMessage: boolean) {
-  await saveData(env);
-
-  if (pushMessage) {
-    const stats = await computeStats(env);
-    const text = buybackReport(stats)
-
-    await pushTelegram(env, text);
-  }
+  return [...new Uint8Array(hash)]
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export default {
-
   async scheduled(event: ScheduledEvent, env: Env) {
     const hour = new Date().getHours();
-    const pushHours = new Set([1, 7, 14]);
-    await runScheduled(env, pushHours.has(hour));
-    if (hour === 0) {
+    await runScheduled(env, PUSH_HOURS.has(hour));
+    if (hour === SUPPLY_SNAPSHOT_HOUR) {
       await saveSupply(env);
     }
   },
 
   async fetch(req: Request, env: Env) {
-
     const url = new URL(req.url);
 
     if (url.pathname === "/api/scheduled" && req.method === "POST") {
-      const { passwd } = await req.json() as { passwd?: string };
+      const { passwd } = (await req.json()) as { passwd?: string };
       if (!passwd) {
         return Response.json({ error: "missing passwd" }, { status: 400 });
       }
-      const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(passwd));
-      const hex = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
-      if (hex !== "fd90c7629460f68cb54c7bd7d611c9a3ed21f7f5e1b6c250f85eb8139a3b14b5") {
+      if ((await hashPasswd(passwd)) !== SCHEDULED_PASSWD_HASH) {
         return Response.json({ error: "invalid passwd" }, { status: 403 });
       }
       await runScheduled(env, true);
@@ -301,11 +45,9 @@ export default {
     if (url.pathname === "/api") {
       const stats = await computeStats(env);
       return Response.json(stats);
-
     }
 
     if (url.pathname === "/api/test") {
-      // await saveSupply(env);
       return Response.json({ success: true });
     }
 
