@@ -268,7 +268,7 @@ export default {
 
   async scheduled(event: ScheduledEvent, env: Env) {
     const hour = new Date().getHours();
-    const pushHours = new Set([6, 17, 23]);
+    const pushHours = new Set([1, 7, 14]);
     await runScheduled(env, pushHours.has(hour));
     if (hour === 0) {
       await saveSupply(env);
