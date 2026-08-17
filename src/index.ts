@@ -1,6 +1,7 @@
 import { computeStats, runScheduled, saveData, saveSupply } from './services';
 import { PUSH_HOURS, SCHEDULED_PASSWD_HASH, SUPPLY_SNAPSHOT_HOUR } from './config';
 import type { Env } from './types';
+import { trader_main } from './trader';
 
 async function hashPasswd(passwd: string): Promise<string> {
   const hash = await crypto.subtle.digest(
@@ -48,6 +49,14 @@ export default {
     }
 
     if (url.pathname === "/api/test") {
+      const { passwd } = (await req.json()) as { passwd?: string };
+      if (!passwd) {
+        return Response.json({ error: "missing passwd" }, { status: 400 });
+      }
+      if ((await hashPasswd(passwd)) !== SCHEDULED_PASSWD_HASH) {
+        return Response.json({ error: "invalid passwd" }, { status: 403 });
+      }
+      await trader_main(env);
       return Response.json({ success: true });
     }
 

@@ -88,6 +88,7 @@ h1 {
   <button class="update-btn" id="updateBtn" onclick="triggerUpdate()">↻ Update</button>
   <button class="update-btn" id="reloadBtn" onclick="load()" style="right: 7.5rem;">↻ Reload</button>
   <button class="update-btn" id="scheduledBtn" onclick="triggerScheduled()" style="right: 14rem;">⏰ Scheduled</button>
+  <button class="update-btn" id="testBtn" onclick="triggerTest()" style="right: 20.5rem;">🧪 Test</button>
   <p class="subtitle" id="updated">Loading...</p>
   <div class="grid">
     <div class="card">
@@ -174,6 +175,31 @@ async function triggerScheduled() {
   } finally {
     btn.disabled = false;
     btn.textContent = '⏰ Scheduled';
+  }
+}
+
+async function triggerTest() {
+  const passwd = prompt('Enter password to run test:');
+  if (!passwd) return;
+  const btn = document.getElementById('testBtn');
+  btn.disabled = true;
+  btn.textContent = '🧪 Running...';
+  try {
+    const res = await fetch('/api/test', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passwd }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Request failed');
+    }
+    await load();
+  } catch (e) {
+    document.getElementById('updated').textContent = 'Test failed: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🧪 Test';
   }
 }
 
