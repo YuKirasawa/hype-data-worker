@@ -1,9 +1,4 @@
-import { Hyperliquid } from 'hyperliquid';
-
-interface Env {
-  wallet_address: string;
-  private_key: string;
-}
+import { Hyperliquid } from './hyperliquid-api';
 
 export async function trader_main(env: Env) {
   const privateKey = env.private_key;

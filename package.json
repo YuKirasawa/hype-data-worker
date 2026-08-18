@@ -17,8 +17,8 @@
 	},
 	"dependencies": {
 		"chanfana": "2.8.3",
+		"ethers": "^6.17.0",
 		"hono": "4.11.1",
-		"hyperliquid": "^1.7.7",
 		"zod": "3.25.67"
 	},
 	"devDependencies": {
