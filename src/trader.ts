@@ -13,8 +13,8 @@ export async function trader_main(env: Env) {
   const placeOrderResponse = await sdk.exchange.placeOrder({
     coin: 'HYPE-SPOT',
     is_buy: false,
-    sz: '0.3', // Will be automatically converted to "1"
-    limit_px: '70', // Will be automatically converted to "50000"
+    sz: '0.3', // Will be automatically converted
+    limit_px: '80', // Will be automatically converted
     reduce_only: false,
     order_type: { limit: { tif: 'Gtc' } },
   });

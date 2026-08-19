@@ -16,6 +16,7 @@ import {
   USDC_INTEREST_RATE_PCT,
 } from './config';
 import { type Stats, buybackReport } from './message';
+import { trader_main } from './trader';
 import type { Env } from './types';
 
 export async function saveData(env: Env) {
@@ -132,4 +133,5 @@ export async function runScheduled(env: Env, pushMessage: boolean) {
 
     await pushTelegram(env, text);
   }
+  await trader_main(env);
 }
