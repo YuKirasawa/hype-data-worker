@@ -133,5 +133,4 @@ export async function runScheduled(env: Env, pushMessage: boolean) {
 
     await pushTelegram(env, text);
   }
-  await trader_main(env);
 }
