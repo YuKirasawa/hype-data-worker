@@ -14,11 +14,11 @@ export async function trader_main(env: Env) {
     coin: 'HYPE-SPOT',
     is_buy: false,
     sz: '0.3', // Will be automatically converted
-    limit_px: '80', // Will be automatically converted
+    limit_px: '76', // Will be automatically converted
     reduce_only: false,
     order_type: { limit: { tif: 'Gtc' } },
   });
-
+  console.log(placeOrderResponse);
   const oid = placeOrderResponse.response.data.statuses[0].resting.oid;
 
   // query by oid
