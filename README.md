@@ -32,3 +32,7 @@ A cron trigger runs every hour. Each run records a data snapshot into the `af_ba
 
 - Hyperliquid info API: `api.hyperliquid.xyz/info`
 - Hyperliquid EVM RPC: `rpc.hyperliquid.xyz/evm`
+
+## Dependencies
+
+- `src/hyperliquid-api` — Hyperliquid TypeScript SDK, adapted from [nomeida/hyperliquid](https://github.com/nomeida/hyperliquid). Provides REST and WebSocket clients for interacting with the Hyperliquid exchange API.
